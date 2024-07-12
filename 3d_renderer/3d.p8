@@ -45,6 +45,34 @@ function mat_p(a, n, f)
   }
 end
 
+function mat_rot_x(a)
+  return {
+    1,0,0,0,
+    0,cos(a),-sin(-a),0,
+    0,sin(-a),cos(a),0,
+    0,0,0,1
+  }
+end
+
+function mat_rot_y(a)
+  return {
+    cos(a),0,sin(-a),0,
+    0,1,0,0,
+    -sin(-a),0,cos(a),0,
+    0,0,0,1 
+  }
+end
+
+function mat_rot_z(a)
+  return {
+    cos(a),-sin(-a),0,0,
+    sin(-a),cos(a),0,0,
+    0,0,1,0,
+    0,0,0,1
+  }
+end
+
+
 -- Multiply two 4x4 matrices
 function mat4x4_mul(a, b)
   return {
@@ -83,20 +111,36 @@ end
 function _init()
 end
 
+angle_x=0.78
+angle_y=0.78
+function _update()
+  -- camera controller
+  angle_x += 0.01
+  angle_y += 0.01
+end
+
 function _draw()
   cls(0)
 
   -- transform all vertices to screen space
-  trans=mat_t(0.0, 0.0, 10.0)
+  trans=mat4x4_mul(
+    mat_t(0.0, 0.0, 10.0),
+    mat4x4_mul(
+      mat_rot_x(angle_x),
+      mat_rot_y(angle_y)
+    )
+  )
   proj=mat_p(0.125, 1.0, 100.0)
+  rot_x=mat_rot_x(1.0)
+  rot_y=mat_rot_y(1.0)
   points={} -- transformed points in screenspace
   for p in all(vb) do
-    tr=mat4x4_v4_mul(trans, p)
+    tr=mat4x4_v4_mul(trans,p)
     tr=mat4x4_v4_mul(proj,tr)
     x=-tr[1]/tr[4]*128+64
     y=-tr[2]/tr[4]*128+64
     z=tr[3]/tr[4]
-    printh(x..' '..y..' '..z)
+    -- printh(x..' '..y..' '..z)
     add(points, {x,y})
   end
 
