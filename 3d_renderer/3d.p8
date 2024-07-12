@@ -18,8 +18,18 @@ vb={
 
 -- index buffer
 ib={
-  {1, 3, 2},
-  {3, 4, 2}
+{3,4,1},
+{2,1,4},
+{2,5,1},
+{6,5,2},
+{6,7,5},
+{6,8,7},
+{7,1,5},
+{7,3,1},
+{8,3,7},
+{8,4,3},
+{2,8,6},
+{2,4,8}
 }
 
 -- Construct a translation matrix
@@ -72,6 +82,21 @@ function mat_rot_z(a)
   }
 end
 
+function vec3_sub(a,b)
+ return {
+  a[1]-b[1],
+  a[2]-b[2],
+  a[3]-b[3],
+ }
+end
+
+function vec3_cross(a,b)
+ return {
+  a[2]*b[3] - a[3]*b[2],
+  a[3]*b[1] - a[1]*b[3],
+  a[1]*b[2] - a[2]*b[1]
+ }
+end
 
 -- Multiply two 4x4 matrices
 function mat4x4_mul(a, b)
@@ -108,15 +133,19 @@ function mat4x4_v4_mul(m,p)
  }
 end
 
+function square(x) return x*x end
+
 function _init()
 end
 
 angle_x=0.78
 angle_y=0.78
+angle_z=0.78
 function _update()
   -- camera controller
   angle_x += 0.01
-  angle_y += 0.01
+  angle_z += 0.01
+  -- angle_y += 0.01
 end
 
 function _draw()
@@ -126,33 +155,48 @@ function _draw()
   trans=mat4x4_mul(
     mat_t(0.0, 0.0, 10.0),
     mat4x4_mul(
-      mat_rot_x(angle_x),
-      mat_rot_y(angle_y)
+      mat_rot_y(angle_z),
+      mat4x4_mul(
+        mat_rot_y(angle_y),
+        mat_rot_x(angle_x)
+      )
     )
   )
   proj=mat_p(0.125, 1.0, 100.0)
   rot_x=mat_rot_x(1.0)
   rot_y=mat_rot_y(1.0)
-  points={} -- transformed points in screenspace
+  wrld_points={} -- transofmed points in worldspace
+  scr_points={} -- transformed points in screenspace
   for p in all(vb) do
     tr=mat4x4_v4_mul(trans,p)
+    add(wrld_points, tr)
     tr=mat4x4_v4_mul(proj,tr)
     x=-tr[1]/tr[4]*128+64
     y=-tr[2]/tr[4]*128+64
-    z=tr[3]/tr[4]
+    -- z=tr[3]/tr[4]
     -- printh(x..' '..y..' '..z)
-    add(points, {x,y})
+    add(scr_points, {x,y})
   end
 
   -- draw all faces
   for tri in all(ib) do
-    for i=0,2 do
-      p1=tri[i+1]
-      p2=tri[(i+1)%3+1]
-      line(
-        points[p1][1], points[p1][2],
-        points[p2][1], points[p2][2]
-      ) 
+    -- check for backspace culling
+    -- first get normal from current triangle
+    p1=vec3_sub(wrld_points[tri[1]], wrld_points[tri[2]])
+    p2=vec3_sub(wrld_points[tri[2]], wrld_points[tri[3]])
+    n=vec3_cross(p1, p2)
+    mag=sqrt(square(n[1]) + square(n[2]) + square(n[3]))
+
+    -- only draw triangle if n is facing camera
+    if n[3]/mag < -0.1 then
+      for i=0,2 do
+        p1=tri[i+1]
+        p2=tri[(i+1)%3+1]
+        line(
+          scr_points[p1][1], scr_points[p1][2],
+          scr_points[p2][1], scr_points[p2][2]
+        ) 
+      end
     end
   end
 end
