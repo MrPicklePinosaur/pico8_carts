@@ -4,17 +4,22 @@ __lua__
 
 c_white=6
 
-square={
-  {
-    {-1,-1, 0, 1},
-    { 1,-1, 0, 1},
-    {-1, 1, 0, 1},
-  },
-  {
-    { 1,-1, 0, 1},
-    { 1, 1, 0, 1},
-    {-1, 1, 0, 1},
-  }
+-- vertex buffer
+vb={
+ {-1,-1, 1, 1},
+ {-1, 1, 1, 1},
+ { 1,-1, 1, 1},
+ { 1, 1, 1, 1},
+ {-1,-1,-1, 1},
+ {-1, 1,-1, 1},
+ { 1,-1,-1, 1},
+ { 1, 1,-1, 1}
+}
+
+-- index buffer
+ib={
+  {1, 3, 2},
+  {3, 4, 2}
 }
 
 -- Construct a translation matrix
@@ -29,18 +34,14 @@ end
 
 -- Construct projection matrix
 -- based off of https://www.youtube.com/watch?v=ih20l3pJoeU
--- inputs
---  a: aspect ratio
---  vn: near clipping plane
---  vf: far clipping plane
---  vtheta: viewing angle
-function mat_p(a, vn, vf)
-  f=1/tan(vtheta/2)
+function mat_p(a, n, f)
+  local h = cos(a/2)/sin(-a/2)
+  local w = h*1.0
   return {
-    a*f,0,0,0,
-    0,f,0,0,
-    0,0,q,1,
-    0,0,-vn*q,0
+    w,0,0,0,
+    0,h,0,0,
+    0,0,(-f/(f-n)),1,
+    0,0,(-f*n/(f-n)),0
   }
 end
 
@@ -79,28 +80,35 @@ function mat4x4_v4_mul(m,p)
  }
 end
 
-function tan(a) return sin(a)/cos(a) end
-
 function _init()
-end
-
-function _update()
-  -- transform all vertices to screen space
-  trans=mat_t(0.0, 0.0, 10.0)
-  proj=mat_p(a, 0.125, 1.0, vtheta)
-  mvp=mat4x4_mul(trans, proj)
-  for triangle in all(square) do
-    for p in all(triangle) do
-      tr=mat4x4_v4_mul(mvp,p)
-      printh(tr[4])
-      x=tr[1]
-      y=tr[2]
-      z=tr[3]
-      printh(x..' '..y..' '..z)
-    end
-  end
 end
 
 function _draw()
   cls(0)
+
+  -- transform all vertices to screen space
+  trans=mat_t(0.0, 0.0, 10.0)
+  proj=mat_p(0.125, 1.0, 100.0)
+  points={} -- transformed points in screenspace
+  for p in all(vb) do
+    tr=mat4x4_v4_mul(trans, p)
+    tr=mat4x4_v4_mul(proj,tr)
+    x=-tr[1]/tr[4]*128+64
+    y=-tr[2]/tr[4]*128+64
+    z=tr[3]/tr[4]
+    printh(x..' '..y..' '..z)
+    add(points, {x,y})
+  end
+
+  -- draw all faces
+  for tri in all(ib) do
+    for i=0,2 do
+      p1=tri[i+1]
+      p2=tri[(i+1)%3+1]
+      line(
+        points[p1][1], points[p1][2],
+        points[p2][1], points[p2][2]
+      ) 
+    end
+  end
 end
