@@ -187,11 +187,12 @@ function raster(tri, c)
   else
     -- split the triangle into two triangles
     v4={
-      (v3[1]-v1[1])/(v3[2]-v1[2])*(v2[2]-v1[2])+v1[1],
+      flr((v3[1]-v1[1])/(v3[2]-v1[2])*(v2[2]-v1[2])+v1[1]),
       v2[2]
     } -- find the splitline
     raster_top(v1, v2, v4, c)
     raster_bot(v2, v4, v3, c)
+    line(v4[1], v2[2], v2[1], v2[2], c) -- draw extra middle line
   end
 end
 
