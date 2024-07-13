@@ -17,19 +17,20 @@ vb={
 }
 
 -- index buffer
+-- 3 vertex indices + color
 ib={
-{3,4,1},
-{2,1,4},
-{2,5,1},
-{6,5,2},
-{6,7,5},
-{6,8,7},
-{7,1,5},
-{7,3,1},
-{8,3,7},
-{8,4,3},
-{2,8,6},
-{2,4,8}
+{3,4,1, 1},
+{2,1,4, 1},
+{2,5,1, 2},
+{6,5,2, 2},
+{6,7,5, 3},
+{6,8,7, 3},
+{7,1,5, 4},
+{7,3,1, 4},
+{8,3,7, 5},
+{8,4,3, 5},
+{2,8,6, 6},
+{2,4,8, 6}
 }
 
 -- Construct a translation matrix
@@ -148,42 +149,50 @@ function sort_vertices(list)
 end
 
 -- rasterize bottom flat triangle
-function raster_top(v1,v2,v3)
+function raster_top(v1,v2,v3,c)
   -- invslope
   m1 = (v2[1]-v1[1])/(v2[2]-v1[2])
   m2 = (v3[1]-v1[1])/(v3[2]-v1[2])
 
   cur_x1, cur_x2 = v1[1], v1[1]
   for i=v1[2],v2[2] do
-    line(cur_x1, i, cur_x2, i)
+    line(flr(cur_x1), i, flr(cur_x2), i, c)
     cur_x1 += m1
     cur_x2 += m2
   end
 end
 
-function raster_bot(v1,v2,v3)
+function raster_bot(v1,v2,v3,c)
   -- invslope
   m1 = (v3[1]-v1[1])/(v3[2]-v1[2])
   m2 = (v3[1]-v2[1])/(v3[2]-v2[2])
 
   cur_x1, cur_x2 = v3[1], v3[1]
   for i=v3[2],v1[2],-1 do
-      line(cur_x1, i, cur_x2, i)
+      line(flr(cur_x1), i, flr(cur_x2), i, c)
       cur_x1 -= m1
       cur_x2 -= m2
   end
 end
 
-function raster(tri)
+function raster(tri, c)
   -- sort vertices by y value
   v1,v2,v3=unpack(sort_vertices(tri))
 
-  v4={(v3[1]-v1[1])/(v3[2]-v1[2])*(v2[2]-v1[2])+v1[1], v2[2]} -- find the splitline
-  -- split the triangle into two triangles
-  raster_top(v1, v2, v4)
-  raster_bot(v2, v4, v3)
-  
-
+  -- degenerate cases with only one triangle
+  if v2[2] == v3[2] then
+    raster_bot(v1, v2, v3)
+  elseif v1[2] == v2[2] then
+    raster_top(v1, v2, v3)
+  else
+    -- split the triangle into two triangles
+    v4={
+      (v3[1]-v1[1])/(v3[2]-v1[2])*(v2[2]-v1[2])+v1[1],
+      v2[2]
+    } -- find the splitline
+    raster_top(v1, v2, v4, c)
+    raster_bot(v2, v4, v3, c)
+  end
 end
 
 function _init()
@@ -267,7 +276,7 @@ function _draw()
             scr_points[p1],
             scr_points[p2],
             scr_points[p3]
-        })
+        }, tri[4])
       end
     end
   end
