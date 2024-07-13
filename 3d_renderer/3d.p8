@@ -135,7 +135,68 @@ end
 
 function square(x) return x*x end
 
+-- comparison based sorting on the y value
+-- input
+--  list: array of (x,y) of length 3
+-- reference http://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
+function sort_vertices(list)
+  a, b, c = unpack(list)
+  if a[2] > b[2] then a, b = b, a end
+  if b[2] > c[2] then b, c = c, b end
+  if a[2] > b[2] then a, b = b, a end
+  return {a,b,c}
+end
+
+-- rasterize bottom flat triangle
+function raster_top(v1,v2,v3)
+  -- invslope
+  m1 = (v2[1]-v1[1])/(v2[2]-v1[2])
+  m2 = (v3[1]-v1[1])/(v3[2]-v1[2])
+
+  cur_x1, cur_x2 = v1[1], v1[1]
+  for i=v1[2],v2[2] do
+    line(cur_x1, i, cur_x2, i)
+    cur_x1 += m1
+    cur_x2 += m2
+  end
+end
+
+function raster_bot(v1,v2,v3)
+  -- invslope
+  m1 = (v3[1]-v1[1])/(v3[2]-v1[2])
+  m2 = (v3[1]-v2[1])/(v3[2]-v2[2])
+
+  cur_x1, cur_x2 = v3[1], v3[1]
+  for i=v3[2],v1[2],-1 do
+      line(cur_x1, i, cur_x2, i)
+      cur_x1 -= m1
+      cur_x2 -= m2
+  end
+end
+
+function raster(tri)
+  -- sort vertices by y value
+  v1,v2,v3=unpack(sort_vertices(tri))
+
+  v4={(v3[1]-v1[1])/(v3[2]-v1[2])*(v2[2]-v1[2])+v1[1], v2[2]} -- find the splitline
+  -- split the triangle into two triangles
+  raster_top(v1, v2, v4)
+  raster_bot(v2, v4, v3)
+  
+
+end
+
 function _init()
+  -- test for sorted_vertices
+  -- verts={
+  --   {1, 8},
+  --   {2, 2},
+  --   {3, 4},
+  -- }
+  -- sorted=sort_vertices(verts)
+  -- for v in all(sorted) do
+  --   printh(v[1]..' '..v[2]) 
+  -- end
 end
 
 angle_x=0.78
@@ -147,6 +208,7 @@ function _update()
   angle_z += 0.01
   -- angle_y += 0.01
 end
+
 
 function _draw()
   cls(0)
@@ -192,10 +254,20 @@ function _draw()
       for i=0,2 do
         p1=tri[i+1]
         p2=tri[(i+1)%3+1]
+        p3=tri[(i+2)%3+1]
+        -- border (wireframe mode)
         line(
           scr_points[p1][1], scr_points[p1][2],
           scr_points[p2][1], scr_points[p2][2]
         ) 
+
+        -- scanline method to actually color the triangles
+        -- TODO use less tokens here
+        raster({
+            scr_points[p1],
+            scr_points[p2],
+            scr_points[p3]
+        })
       end
     end
   end
